@@ -3,16 +3,16 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
+#include <algorithm>
 
 using namespace std;
 using namespace sf;
 
-const float WIDTH_GAME_WINDOW = 700;
-const float HEIGHT_GAME_WINDOW = 700;
+const float WIDTH_GAME_WINDOW = 800;
+const float HEIGHT_GAME_WINDOW = 600;
 const float CENTER_WIDTH_GAME_WINDOW = WIDTH_GAME_WINDOW / 2;
 const float CENTER_HEIGHT_GAME_WINDOW = HEIGHT_GAME_WINDOW / 2;
 
-class Draw;
 /**
  * Дефолтный класс элемента
  */
@@ -44,7 +44,7 @@ public:
             float left = 0,
             int elementId = 0,
             Color fillColor = Color::White
-    ){
+    ) {
         this->width = width;
         this->height = height;
         this->top = top;
@@ -110,7 +110,7 @@ public:
         );
     }
 
-    void render(RenderWindow& window) {
+    void render(RenderWindow &window) {
         this->text.setFont(this->font);
         this->text.setString(L"" + this->innerText);
         this->text.setCharacterSize(this->fontSize);
@@ -133,7 +133,7 @@ public:
             float left = 0,
             int elementId = 0,
             Color fillColor = Color::White
-    ){
+    ) {
         this->width = width;
         this->height = height;
         this->top = top;
@@ -158,7 +158,7 @@ class GameCell : public Element {
     Texture texture;
 
     bool haveSprite = false;
-    bool clicked    = false;
+    bool clicked = false;
 
     const string IMGS_PATH = "./media/imgs/";
 public:
@@ -168,7 +168,7 @@ public:
             float top = 0,
             float left = 0,
             int elementId = 0
-    ){
+    ) {
         this->width = width;
         this->height = height;
         this->top = top;
@@ -183,6 +183,9 @@ public:
         this->clicked = true;
         this->texture = texture;
     }
+    void selectCard(Image img) {
+        this->texture.loadFromImage(img);
+    }
 
     void unSelect() {
         this->clicked = false;
@@ -192,7 +195,7 @@ public:
         return this->clicked;
     }
 
-    void renderImg(RenderWindow& window) {
+    void renderImg(RenderWindow &window) {
         Sprite sprite;
         sprite.setTexture(this->texture);
         sprite.setPosition(this->left, this->top);
@@ -201,19 +204,19 @@ public:
         window.draw(sprite);
     }
 
-    void render(RenderWindow& window) {
+    void render(RenderWindow &window) {
         if (this->clicked) {
             this->renderImg(window);
 
             return;
         }
 
-       window.draw(this->rectangle);
+        window.draw(this->rectangle);
     }
 };
 
 enum MENU_BUTTONS {
-    playerVersus   = 0,
+    playerVersus = 0,
     computerVersus = 1
 };
 
@@ -223,14 +226,13 @@ enum GAME_BUTTONS {
 };
 
 enum GAME_ELEMENTS {
-    whoseTurn   = 0
+    whoseTurn = 0
 };
 
 /**
  * Класс игры в крестики-нолики
  */
-class TicTacToe
-{
+class TicTacToe {
     RenderWindow &window;
 
     Texture crossTexture;
@@ -246,6 +248,7 @@ class TicTacToe
     vector <vector<int>> turnPrioritet;
     vector <vector<int>> randomTurn;
 
+    const int EMPTY_CELL = -1;
     const int CROSS_TURN = 1;
     const int ROUND_TURN = 2;
     const int ELEMENT_WIDTH_HEIGHT = 50;
@@ -258,7 +261,7 @@ class TicTacToe
     const int FIELD_CELL_HEIGHT = 60;
     const int FIELD_CELL_WIDTH = 60;
     const int FIELD_START_POSITION = 30;
-    const int FIELD_END_POSITION = 75 * FIELD_COUNT_ROWS;
+    const int FIELD_END_POSITION = 65 * FIELD_COUNT_ROWS;
 
     const int MAX_ITERATION = 100;
     int iteration = 0;
@@ -268,11 +271,11 @@ class TicTacToe
 
     const string IMGS_PATH = "./media/imgs/";
 
-    bool showAlert = false;
+    bool gameOn            = false;
+    bool showAlert         = false;
     bool clickableGameCell = true;
-    bool gameOn = false;
 
-    int enemyType = 0;
+    int enemyType  = 0;
     int playerTurn = CROSS_TURN;
 
     string winner = "";
@@ -444,12 +447,8 @@ class TicTacToe
 
     void selectCell(int row, int column) {
         if (selectedGameCells[row][column] > -1) {
-            cout << "Поле уже выбрано. Поле выбрал " << this->playerTurn << endl;
-
             return;
         }
-
-        cout << "Поле выбрал " << this->playerTurn << endl;
 
         Texture texture = this->playerTurn == CROSS_TURN ? this->crossTexture : this->roundTexture;
 
@@ -628,15 +627,15 @@ class TicTacToe
             this->turnPrioritet.push_back(selectedRow);
         }
 
-        Element whoseTurn(240, 50, 10, CENTER_WIDTH_GAME_WINDOW);
+        Element whoseTurn(240, 50, 10, CENTER_WIDTH_GAME_WINDOW + 40);
         whoseTurn.setMarginText(75, 10);
 
-        MenuButton retryButton(240, 27, 60, CENTER_WIDTH_GAME_WINDOW);
+        MenuButton retryButton(240, 27, 60, CENTER_WIDTH_GAME_WINDOW + 40);
         retryButton.setText("retry");
         retryButton.setFillColor(Color::Green);
         retryButton.setMarginText(100, 3);
 
-        MenuButton backMenuButton(240, 27, 87, CENTER_WIDTH_GAME_WINDOW);
+        MenuButton backMenuButton(240, 27, 87, CENTER_WIDTH_GAME_WINDOW + 40);
         backMenuButton.setText("Back to menu");
         backMenuButton.setFillColor(Color::Yellow);
         backMenuButton.setMarginText(70, 3);
@@ -752,19 +751,23 @@ class TicTacToe
     }
 
     void computerTurn() {
-        iteration++;
-
-        if (iteration >= MAX_ITERATION) {
-            cout << "Достигли максимума" << endl;
-
+        if (!this->clickableGameCell) {
             return;
         }
 
-        cout << "Компьютер сделал ход" << endl;
+        iteration++;
+
+        if (iteration >= MAX_ITERATION) {
+            return;
+        }
 
         // Сначала используем стандартный паттерн - между крестиками
         for(int row = 0; row < FIELD_COUNT_ROWS; row++){
             for(int column = 0; column < FIELD_COUNT_COLUMNS; column++) {
+                if (selectedGameCells[row][column] == EMPTY_CELL) {
+                    continue;
+                }
+
                 int nextRow        = row + 1;
                 int nextColumn     = column + 1;
                 int nextNextRow    = row + 2;
@@ -786,23 +789,8 @@ class TicTacToe
                     nextRow = FIELD_COUNT_ROWS - 1;
                 }
 
-                if (selectedGameCells[row][column] == CROSS_TURN) {
-                    bool basicTurn = this->basicComputerPatterns(
-                            row,
-                            nextRow,
-                            nextNextRow,
-                            column,
-                            nextColumn,
-                            nextNextColumn
-                    );
-
-                    if (basicTurn) {
-                        return;
-                    }
-                }
-
                 if (selectedGameCells[row][column] == ROUND_TURN) {
-                    bool advancedTurn = this->advancedComputerPatterns(
+                    bool advancedTurn = this->advancedProtectComputerPatterns(
                             row,
                             nextRow,
                             nextNextRow,
@@ -814,15 +802,106 @@ class TicTacToe
                     if (advancedTurn) {
                         return;
                     }
+
+                    bool basicTurn = this->basicProtectComputerPatterns(
+                            row,
+                            nextRow,
+                            nextNextRow,
+                            column,
+                            nextColumn,
+                            nextNextColumn,
+                            ROUND_TURN
+                    );
+
+                    if (basicTurn) {
+                        return;
+                    }
+                }
+
+                if (selectedGameCells[row][column] == CROSS_TURN) {
+                    bool basicTurn = this->basicProtectComputerPatterns(
+                            row,
+                            nextRow,
+                            nextNextRow,
+                            column,
+                            nextColumn,
+                            nextNextColumn,
+                            CROSS_TURN
+                    );
+
+                    if (basicTurn) {
+                        return;
+                    }
+
+                    bool turn = this->bestTurnForComputer(
+                            row,
+                            nextRow,
+                            nextNextRow,
+                            column,
+                            nextColumn,
+                            nextNextColumn
+                            );
+
+                    if (turn) {
+                        return;
+                    }
                 }
             }
         }
 
-        this->computerAngleTurn();
+        if (this->computerAngleTurn()) {
+            return;
+        }
     }
 
     /**
-     * Более продвинутые паттерны компьютера
+     * Метод, который ищет, куда пойти крестикам, в случае, если мы не
+     * прошли по базовым, продвинутым и угловым паттернам
+     */
+    bool bestTurnForComputer(int row, int nextRow, int nextNextRow, int column, int nextColumn, int nextNextColumn) {
+        int prevRow = row - 1 < 0 ? 0 : row - 1;
+        int prevCol = column - 1 < 0 ? 0 : column - 1;
+
+        if (selectedGameCells[row][nextColumn] == EMPTY_CELL) {
+            this->selectCell(row, nextColumn);
+
+            return true;
+        } else if (selectedGameCells[row][prevCol] == EMPTY_CELL) {
+            this->selectCell(row, nextColumn);
+
+            return true;
+        } else if (selectedGameCells[nextRow][column] == EMPTY_CELL) {
+            this->selectCell(nextRow, column);
+
+            return true;
+        }  else if (selectedGameCells[prevRow][column] == EMPTY_CELL) {
+            this->selectCell(prevRow, column);
+
+            return true;
+        } else if (selectedGameCells[prevRow][nextColumn] == EMPTY_CELL) {
+            this->selectCell(nextRow, nextColumn);
+
+            return true;
+        } else if (selectedGameCells[nextRow][nextColumn] == EMPTY_CELL) {
+            this->selectCell(nextRow, nextColumn);
+
+            return true;
+        } else if (selectedGameCells[nextRow][prevCol] == EMPTY_CELL) {
+            this->selectCell(nextRow, nextColumn);
+
+            return true;
+        } else if (selectedGameCells[prevRow][prevCol] == EMPTY_CELL) {
+            this->selectCell(prevRow, prevCol);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Более продвинутые защитные паттерны компьютера
+     * Проверяются нолики
      *
      * @param nextRow
      * @param nextNextRow
@@ -830,101 +909,98 @@ class TicTacToe
      * @param nextNextColumn
      * @return
      */
-    bool advancedComputerPatterns(int row, int nextRow, int nextNextRow, int column, int nextColumn, int nextNextColumn)
-    {
+    bool advancedProtectComputerPatterns(int row, int nextRow, int nextNextRow, int column, int nextColumn,int nextNextColumn) {
         int thisSelectedValue = selectedGameCells[row][column];
 
-        if (thisSelectedValue == ROUND_TURN) {
-            int countRound = 0;
+        if (thisSelectedValue != ROUND_TURN) {
+            return false;
+        }
 
-            // Прежде всего надо смотреть на нули, которые в шаге от победы
+        int countRound = 0;
+        int spacesBetweenRounds = 0;
 
-            // Горизонталь
-            if (selectedGameCells[row][nextNextRow] == ROUND_TURN) {
-                this->selectCell(row, nextRow);
-
-                return true;
-            }
-
-            // Вертикаль
-            if (selectedGameCells[nextNextRow][column] == ROUND_TURN) {
-                this->selectCell(nextRow, column);
-
-                return true;
-            }
-
-//            // Диагональ (право)
-//            if (selectedGameCells[nextNextColumn][nextNextRow] == ROUND_TURN) {
-//                this->selectCell(row, nextRow);
-//
-//                return true;
-//            }
-//
-//            // Вертикаль
-//            if (selectedGameCells[nextNextRow][column] == ROUND_TURN) {
-//                this->selectedGameCells(nextRow, column);
-//
-//                return true;
-//            }
-
-            // Первая проверка будет по вертикале
-            for(int i = 0, j = row; i < COUNT_SELECTED_FOR_WIN; i++, j--) {
-                int iRow = row + i;
-                int jRow = row - j;
-
-                if (row + COUNT_SELECTED_FOR_WIN - 1 >= FIELD_COUNT_ROWS) {
+        // Смотрим по вертикали
+        if (FIELD_COUNT_ROWS - row >= COUNT_SELECTED_FOR_WIN - 1) {
+            for (int iRow = row; iRow < FIELD_COUNT_ROWS; iRow++) {
+                if (selectedGameCells[iRow][column] == CROSS_TURN) {
                     break;
                 }
 
-                if (iRow >= FIELD_COUNT_ROWS) {
-                    iRow--;
-                }
+                int selectRow = 0;
 
-                if (jRow < 0) {
-                    jRow++;
-                }
-
-                if (selectedGameCells[iRow][column] == -1 && countRound > 1) {
-                    this->selectCell(iRow, column);
-
-                    return true;
-                } else if (selectedGameCells[jRow][column] == -1 && countRound > 1) {
-                    this->selectCell(jRow, column);
-
-                    return true;
-                }
-
-                if (selectedGameCells[iRow][column] == ROUND_TURN || selectedGameCells[jRow][column] == ROUND_TURN) {
+                if (selectedGameCells[iRow][column] == ROUND_TURN) {
+                    int emptyCellsCount = 0;
                     countRound++;
 
-                    continue;
+
+                    for (int i = 0; selectedGameCells[i][column] <= EMPTY_CELL; i++) {
+                        emptyCellsCount++;
+
+                        selectRow++;
+
+                        if (emptyCellsCount > 2) {
+                            break;
+                        }
+                    }
+
+                    spacesBetweenRounds = emptyCellsCount;
+                }
+
+                if (countRound == COUNT_SELECTED_FOR_WIN - 2) {
+                    if (selectedGameCells[iRow][column] == EMPTY_CELL) {
+                        this->selectCell(iRow, column);
+
+                        return true;
+                    } else if (row - 1 >= 0 && selectedGameCells[row - 1][column] == EMPTY_CELL) {
+                        this->selectCell(row - 1, column);
+
+                        return true;
+                    }
                 }
             }
+        }
 
-            countRound = 0;
+        spacesBetweenRounds = 0;
+        countRound = 0;
 
-            // Вторая по горизонтали
-            for(int i = 0; i < COUNT_SELECTED_FOR_WIN; i++) {
-                int iColumn = column + i;
-
-                if (column + COUNT_SELECTED_FOR_WIN - 1 >= FIELD_COUNT_COLUMNS) {
+        // Смотрим по горизонтали
+        if (FIELD_COUNT_COLUMNS - column >= COUNT_SELECTED_FOR_WIN - 1) {
+            for (int iColumn = column; iColumn < FIELD_COUNT_COLUMNS; iColumn++) {
+                if (selectedGameCells[row][iColumn] == CROSS_TURN) {
                     break;
                 }
 
-                if (iColumn >= FIELD_COUNT_COLUMNS) {
-                    iColumn--;
-                }
-
-                if (selectedGameCells[row][iColumn] == -1 && countRound > 1) {
-                    this->selectCell(row, iColumn);
-
-                    return true;
-                }
+                int selectColumn = 0;
 
                 if (selectedGameCells[row][iColumn] == ROUND_TURN) {
+                    int emptyCellsCount = 0;
                     countRound++;
 
-                    continue;
+
+                    for (int i = 0; selectedGameCells[row][i] <= EMPTY_CELL; i++) {
+                        emptyCellsCount++;
+
+                        selectColumn++;
+
+                        if (emptyCellsCount > 2) {
+                            break;
+                        }
+                    }
+
+                    spacesBetweenRounds = emptyCellsCount;
+                }
+
+                if (countRound == COUNT_SELECTED_FOR_WIN - 2) {
+                    if (selectedGameCells[row][iColumn] == EMPTY_CELL) {
+
+                        this->selectCell(row, iColumn);
+
+                        return true;
+                    } else if (column - 1 >= 0 && selectedGameCells[row][column - 1] == EMPTY_CELL) {
+                        this->selectCell(row, column - 1);
+
+                        return true;
+                    }
                 }
             }
         }
@@ -933,7 +1009,7 @@ class TicTacToe
     }
 
     /**
-     * Метод базовых паттернов поведения компьютера
+     * Метод базовых защитных паттернов поведения компьютера
      *
      * @param row
      * @param nextRow
@@ -941,27 +1017,21 @@ class TicTacToe
      * @param column
      * @param nextColumn
      * @param nextNextColumn
-     *
+     * @param verificationValue
      * @return
      */
-    bool basicComputerPatterns(int row, int nextRow, int nextNextRow, int column, int nextColumn, int nextNextColumn)
-    {
-        if (selectedGameCells[row][column] == ROUND_TURN) {
-            return false;
-        }
-
+    bool
+    basicProtectComputerPatterns(int row, int nextRow, int nextNextRow, int column, int nextColumn, int nextNextColumn, int verificationValue) {
         // Между крестиками по горизонтали
-        if (selectedGameCells[row][nextColumn] <= -1 && selectedGameCells[row][nextNextColumn] == CROSS_TURN) {
-            cout << 1 << endl;
-
+        if (selectedGameCells[row][nextColumn] <= -1 && selectedGameCells[row][nextNextColumn] == verificationValue) {
             this->selectCell(row, nextColumn);
 
             return true;
         }
 
         // Между крестиками по диагонали на правую сторону
-        if (selectedGameCells[nextRow][nextColumn] <= -1 && selectedGameCells[nextNextRow][nextNextColumn] == CROSS_TURN) {
-            cout << 2 << endl;
+        if (selectedGameCells[nextRow][nextColumn] <= -1 &&
+            selectedGameCells[nextNextRow][nextNextColumn] == verificationValue) {
 
             this->selectCell(nextRow, nextColumn);
 
@@ -969,8 +1039,8 @@ class TicTacToe
         }
 
         // Между крестиками по диагонали на левую сторону
-        if (column - 2 >= 0 && selectedGameCells[nextRow][column - 1] <= -1 &&  selectedGameCells[nextNextRow][column - 2] == CROSS_TURN) {
-            cout << 3 << endl;
+        if (column - 2 >= 0 && selectedGameCells[nextRow][column - 1] <= -1 &&
+            selectedGameCells[nextNextRow][column - 2] == verificationValue) {
 
             this->selectCell(nextRow, column - 1);
 
@@ -978,8 +1048,7 @@ class TicTacToe
         }
 
         // Между крестиками по вертикали
-        if (selectedGameCells[nextRow][column] <= -1 && selectedGameCells[nextNextRow][column] == CROSS_TURN) {
-            cout << 4 << endl;
+        if (selectedGameCells[nextRow][column] <= -1 && selectedGameCells[nextNextRow][column] == verificationValue) {
 
             this->selectCell(nextRow, column);
 
@@ -992,33 +1061,33 @@ class TicTacToe
     /**
      * Заполнение углов компьютером
      */
-    void computerAngleTurn()
-    {
-        int rows    = FIELD_COUNT_ROWS - 1;
+    bool computerAngleTurn() {
+        int rows = FIELD_COUNT_ROWS - 1;
         int columns = FIELD_COUNT_COLUMNS - 1;
 
         if (selectedGameCells[0][0] == -1) {
             this->selectCell(0, 0);
 
-            return;
+            return true;
         } else if (selectedGameCells[0][columns] == -1) {
             this->selectCell(0, columns);
 
-            return;
+            return true;
         } else if (selectedGameCells[rows][0] == -1) {
             this->selectCell(rows, 0);
 
-            return;
+            return true;
         } else if (selectedGameCells[rows][columns] == -1) {
             this->selectCell(rows, columns);
 
-            return;
+            return true;
         }
+
+        return false;
     }
 
 
-    bool isInGameField(int X, int Y)
-    {
+    bool isInGameField(int X, int Y) {
         return (
                 (X > FIELD_START_POSITION && X < FIELD_END_POSITION)
                 && (Y > FIELD_START_POSITION && Y < FIELD_END_POSITION)
@@ -1026,7 +1095,7 @@ class TicTacToe
     }
 
 public:
-    TicTacToe(RenderWindow &win) : window(win){
+    TicTacToe(RenderWindow &win) : window(win) {
         this->init();
 
         Clock clock;
