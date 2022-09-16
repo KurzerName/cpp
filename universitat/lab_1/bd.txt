@@ -1,0 +1,6 @@
+Mitsubishi;500;12;red
+Toyoto;200;100;red
+Honda;50;80;white
+BMW;700;1000;orange
+Honda;50;80;green
+NewCar;200;123;Green
